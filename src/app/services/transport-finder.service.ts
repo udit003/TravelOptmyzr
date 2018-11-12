@@ -2,9 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { PlaceInput,PlacesQuery } from '../interfaces/PlacesInterface';
 import { Subject, BehaviorSubject, forkJoin } from 'rxjs';
-import {RouteResponseState,RouteResponseData,ResultState} from '../interfaces/RouteInterface';
+import {RouteResponseState,RouteResponseData,ResultState,DirectionApiResponse} from '../interfaces/RouteInterface';
 import { DirectionApiService } from './direction-api.service';
 import { filter, switchMap, tap } from 'rxjs/operators';
+import { not } from '@angular/compiler/src/output/output_ast';
  
 @Injectable({
   providedIn: 'root'
@@ -18,7 +19,7 @@ export class TransportFinderService {
   routeResponseState:BehaviorSubject<RouteResponseState> = new BehaviorSubject(RouteResponseState.SUCCESS);
 
   // output data pipe
-  routeResponseData:BehaviorSubject<RouteResponseData> = new BehaviorSubject({resultState:ResultState.NO_RESULT}); 
+  routeResponseData:BehaviorSubject<RouteResponseData> = new BehaviorSubject({resultState:ResultState.NOTHING_TO_SHOW}); 
 
   constructor(private directionApiService:DirectionApiService) {
     this.findTransportSubject.pipe(
@@ -26,27 +27,78 @@ export class TransportFinderService {
       tap(() =>  this.routeResponseData.next({resultState:ResultState.FETCHING_RESULT})),
       switchMap(data => 
         forkJoin(
-          [directionApiService.findAllRoutes(this.getLocationQueryString(data.origin),this.getLocationQueryString(data.destination),google.maps.TravelMode.DRIVING),
-          directionApiService.findAllRoutes(this.getLocationQueryString(data.origin),this.getLocationQueryString(data.destination),google.maps.TravelMode.TRANSIT)])
+          [directionApiService.findAllRoutes(
+            this.getLocationQueryString(data.origin),
+            this.getLocationQueryString(data.destination),google.maps.TravelMode.DRIVING),
+          directionApiService.findAllRoutes(
+            this.getLocationQueryString(data.origin),
+            this.getLocationQueryString(data.destination),google.maps.TravelMode.TRANSIT)
+          // directionApiService.findAllRoutes(
+          //   this.getLocationQueryString(data.origin),
+          //   this.getLocationQueryString(data.destination),
+          //   google.maps.TravelMode.WALKING)
+          ])
         )
       )
       .subscribe(result => {
-        // now I need to 
+        //this.processRouteData(result)
         console.log(result);
       })
 
 
    }
 
-  findAllRoutes(origin:PlaceInput,destination:PlaceInput){
-    this.routeResponseData.next({resultState:ResultState.FETCHING_RESULT});
-    // I have an observable, I have two observables using which I want to 
+   private processRouteData(fetchedResults:DirectionApiResponse[]) : RouteResponseData {
+    
+    var returnData:RouteResponseData = {resultState:ResultState.UNEXPECTED_ERROR,resultData:null};
 
-  }
+    let allDirectionResultObjects = [];
 
-  makeHttpRequest(origin:PlaceInput,destination:PlaceInput){
-     
-  }
+    let zero_results = 0;
+    let not_found = 0;
+    let other_error = 0;
+    let total_requests = fetchedResults.length;
+
+    fetchedResults.forEach(rawResponse => {
+      switch(rawResponse.status) {
+        case 'OK' : {
+          allDirectionResultObjects.push(rawResponse.directionResult);
+          break;
+        }
+        case 'NOT_FOUND' : {
+          not_found++;
+          break;
+        }
+        case 'ZERO_RESULTS' : {
+          zero_results++;
+          break;
+        } 
+        default : {
+          other_error++;
+        }
+
+      }
+    });
+
+    if(allDirectionResultObjects.length>0) {
+      returnData.resultState = ResultState.ROUTES_FOUND;
+      returnData.resultData = allDirectionResultObjects;
+      this.routeResponseState.next(RouteResponseState.SUCCESS);
+      
+    } else if (zero_results>0) {
+      returnData.resultState = ResultState.NO_ROUTES_FOUND;
+      returnData.resultData = null;
+      this.routeResponseState.next(RouteResponseState.SUCCESS);
+
+    } else if(not_found>0) {
+      returnData.resultState = ResultState.GEOCODING_ERROR;
+      returnData.resultData = null;
+      this.routeResponseState.next(RouteResponseState.INVALID_ONE_OR_BOTH);
+    }
+
+    return returnData;
+
+   }
 
   private validateLocations(origin:PlaceInput,destination:PlaceInput) : boolean {
     // console.log(origin);

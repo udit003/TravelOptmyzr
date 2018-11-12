@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable,Observer } from 'rxjs';
+import { DirectionApiResponse } from '../interfaces/RouteInterface';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,7 @@ export class DirectionApiService {
   constructor() { }
 
 
-  findAllRoutes(origin:any,destination:any,travelMode:google.maps.TravelMode):Observable<any>{
+  findAllRoutes(origin:any,destination:any,travelMode:google.maps.TravelMode):Observable<DirectionApiResponse>{
 
     return Observable.create(observer => {
       var service = new google.maps.DirectionsService();
@@ -17,12 +18,15 @@ export class DirectionApiService {
         {
           origin:origin,
           destination:destination,
-          travelMode:travelMode
+          travelMode:travelMode,
+          provideRouteAlternatives:true
         } , (response, status) => {
-          observer.next(response)
+          observer.next({status:status,directionResult:response})
           observer.complete()
         } 
       )
     });
   }
+
+  // direction api helper
 }
