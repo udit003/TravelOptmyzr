@@ -1,0 +1,5 @@
+<div class="find-block">
+  <location-input [placeholderData]="'Enter a starting location'"  (newPlaceInput) = "onPlaceUpdate($event,'from')"></location-input>
+  <location-input [placeholderData]="'Where to?'" (newPlaceInput) = "onPlaceUpdate($event,'to')"></location-input>
+  <button class="btn btn-primary">Find Transport</button>
+</div>

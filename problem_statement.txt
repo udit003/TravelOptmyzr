@@ -1,0 +1,11 @@
+"Create a visual itenerary finder for given 2 locations"
+
+Details:
+
+1. The whole thing is a single page HTML/JS implementation
+2. In Step 1, ask for 2 inputs - "Source Location" and "Destination Location" (names of places)
+3. Use the Rome2Rio API to get the possible iteneraries between these 2 places
+4. Visualize the itenerary on Google Map, showing each leg of the journey - it is up to you to decide how to show it on the map. One example could be to mark all locations/intermediate stops on the map with markers, and draw stratight lines between them to show the order. One could show more details too - use your creativity :)
+5. Stretch Goal - add autocomplete for locations when taking inputs
+
+You can use any framework you like, but the whole implementation should be client side (no server side code).
